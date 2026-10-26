@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kollel Donor Lookup</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#f6f4ee; --surface:#ffffff; --ink:#1d1a14; --muted:#6b655a; --line:#e3ded2;
+    --accent:#1f4e79; --accent-ink:#ffffff; --good:#1e7a46; --warn:#a2541a; --chip:#eef2f7;
+    --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#15140f; --surface:#1f1d17; --ink:#efebe2; --muted:#a39d90; --line:#36332b;
+    --accent:#7fb0dd; --accent-ink:#0f1a26; --good:#6fd39a; --warn:#e7a46c; --chip:#2a2e36;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent)}
+  button{font:inherit}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  header.top h1{font-size:18px;margin:0;letter-spacing:.2px}
+  header.top .sub{color:var(--muted);font-size:13px}
+  .btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.small{padding:5px 9px;font-size:13px}
+  /* lock screen */
+  #lock{min-height:100vh;display:grid;place-items:center;padding:16px}
+  #lock form{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:28px;width:100%;max-width:380px}
+  #lock h1{margin:0 0 4px;font-size:20px}
+  #lock p{margin:0 0 18px;color:var(--muted);font-size:14px}
+  #lock input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:16px;margin-bottom:12px}
+  #lock .btn{width:100%;padding:11px}
+  #lockerr{color:var(--warn);font-size:13px;min-height:18px;margin-top:8px}
+  /* controls */
+  .controls{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px}
+  @media(min-width:760px){.controls{grid-template-columns:2fr 3fr}}
+  .search{position:relative}
+  .search input{width:100%;padding:12px 14px 12px 38px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:16px}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .filters select,.filters .seg{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:9px 10px;font-size:14px}
+  .seg{display:inline-flex;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--muted);padding:6px 10px;border-radius:6px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:var(--accent-ink)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+  .stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .stat .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .tabs button{border:0;background:transparent;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  /* tables */
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:600;background:var(--bg);cursor:pointer;user-select:none;white-space:nowrap}
+  th.sorted::after{content:" ▾";color:var(--accent)} th.sorted.asc::after{content:" ▴"}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.row{cursor:pointer} tr.row:hover td{background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+  .name{font-weight:600}
+  .meta{color:var(--muted);font-size:13px}
+  .chip{display:inline-block;background:var(--chip);border-radius:999px;padding:1px 8px;font-size:12px;margin-right:4px;white-space:nowrap}
+  .pos{color:var(--good)} .due{color:var(--warn);font-weight:600}
+  .empty{padding:30px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius)}
+  .tablewrap{overflow-x:auto}
+  /* profile */
+  .profile{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px}
+  .profile .head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+  .profile h2{margin:0;font-size:22px}
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+  @media(min-width:700px){.grid2{grid-template-columns:1fr 1fr}}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+  .card h3{margin:0 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+  .kv .k{color:var(--muted)}
+  .kv .v{font-variant-numeric:tabular-nums}
+  .hide{display:none!important}
+  footer{color:var(--muted);font-size:12px;margin-top:24px;text-align:center}
+  @media (max-width:600px){ .hide-sm{display:none} }
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <form id="lockform" autocomplete="off">
+    <h1>Kollel Donor Lookup</h1>
+    <p>Enter the password to unlock the donor records.</p>
+    <input id="pw" type="password" placeholder="Password" autofocus>
+    <button class="btn primary" type="submit">Unlock</button>
+    <div id="lockerr"></div>
+  </form>
+</div>
+
+<div id="app" class="wrap hide">
+  <header class="top">
+    <div>
+      <h1>Kollel Donor Lookup</h1>
+      <div class="sub" id="srcline"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn small" id="exportBtn" title="Download the current filtered list as CSV">Export CSV</button>
+      <button class="btn small" id="lockBtn">Lock</button>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search name, email, phone, address…">
+    </div>
+    <div class="filters">
+      <div class="seg" id="calSeg" title="Which calendar the Month filter and date columns use">
+        <button data-cal="greg" class="on">English</button>
+        <button data-cal="heb">Hebrew</button>
+      </div>
+      <select id="yearSel"></select>
+      <select id="monthSel"></select>
+      <select id="typeSel">
+        <option value="all">All gifts</option>
+        <option value="donation">Donations</option>
+        <option value="parlor">Parlor Meeting</option>
+        <option value="pledge">Pledge balance due</option>
+      </select>
+      <button class="btn small" id="clearBtn">Clear</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs">
+    <button data-tab="donors" class="on">Donors</button>
+    <button data-tab="gifts">Gifts</button>
+  </div>
+
+  <div id="view"></div>
+  <footer>Dates in the spreadsheet are recorded by month, so each gift shows the month it was received and the Hebrew month(s) that month spans. Parlor Meeting gifts have no date.</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
+const GREG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const HEB_ORDER = ["Tishri","Heshvan","Kislev","Tevet","Shevat","Adar I","Adar","Adar II","Nisan","Iyar","Sivan","Tamuz","Av","Elul"];
+const HEB_DISPLAY = {"Tishri":"Tishrei","Heshvan":"Cheshvan","Tamuz":"Tammuz"};
+const hebFmt = new Intl.DateTimeFormat("en-u-ca-hebrew",{year:"numeric",month:"long",day:"numeric"});
+function hebParts(d){
+  const p = Object.fromEntries(hebFmt.formatToParts(d).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return {year:+p.year, month:p.month, day:+p.day};
+}
+const hebName = m => HEB_DISPLAY[m] || m;
+
+// ---------- crypto ----------
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function decrypt(blob, password){
+  const keyMat = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(blob.salt), iterations:blob.iterations, hash:"SHA-256"}, keyMat, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64(blob.iv)}, key, b64(blob.data));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ---------- state ----------
+let DATA = null, DONORS = [], GIFTS = [];
+const state = {q:"", cal:"greg", year:"all", month:"all", type:"all", tab:"donors", donor:null, sort:{donors:["last",1], gifts:["date",-1]}};
+
+function prepare(data){
+  DATA = data;
+  DONORS = data.donors.map(d => {
+    const name = [d.first, d.last].filter(Boolean).join(" ");
+    d.display = d.last + (d.first ? ", " + d.first : "");
+    d.hay = [name, d.display, d.title, d.email, d.phone, d.address, d.city, d.zip].join(" ").toLowerCase();
+    d.donations.forEach(g => {
+      g.donor = d;
+      if (g.date){
+        const [y,m] = g.date.split("-").map(Number);
+        g.gy = y; g.gm = m;
+        const first = hebParts(new Date(y, m-1, 1)), last = hebParts(new Date(y, m, 0));
+        g.heb = first.month === last.month && first.year === last.year ? [first] : [first, last];
+        g.hebLabel = g.heb.map(h=>hebName(h.month)).join("–") + " " + (first.year===last.year ? first.year : first.year+"–"+last.year);
+        g.gregLabel = GREG[m-1] + " " + y;
+      } else { g.heb = []; g.hebLabel = "—"; g.gregLabel = g.event || "—"; }
+    });
+    return d;
+  });
+  GIFTS = DONORS.flatMap(d => d.donations);
+  buildDateOptions();
+}
+
+function buildDateOptions(){
+  const ys = $("#yearSel"), ms = $("#monthSel");
+  const years = new Set(), months = new Set();
+  GIFTS.forEach(g => {
+    if (state.cal === "greg"){ if (g.gy){ years.add(g.gy); months.add(g.gm); } }
+    else g.heb.forEach(h => { years.add(h.year); months.add(h.month); });
+  });
+  const yList = [...years].sort((a,b)=>a-b);
+  ys.innerHTML = `<option value="all">All years</option>` + yList.map(y=>`<option value="${y}">${y}</option>`).join("");
+  let mList;
+  if (state.cal === "greg") mList = [...months].sort((a,b)=>a-b).map(m=>[m, GREG[m-1]]);
+  else mList = HEB_ORDER.filter(m=>months.has(m)).map(m=>[m, hebName(m)]);
+  ms.innerHTML = `<option value="all">All months</option>` + mList.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  ys.value = yList.includes(+state.year) ? state.year : "all"; state.year = ys.value;
+  ms.value = "all"; state.month = "all";
+}
+
+function giftMatchesDate(g){
+  if (state.year==="all" && state.month==="all") return true;
+  if (!g.date) return false;
+  if (state.cal === "greg")
+    return (state.year==="all" || g.gy===+state.year) && (state.month==="all" || g.gm===+state.month);
+  return g.heb.some(h => (state.year==="all" || h.year===+state.year) && (state.month==="all" || h.month===state.month));
+}
+function giftMatchesType(g){ return state.type==="all" || state.type==="pledge" || g.type===state.type; }
+const dateFilterOn = () => state.year!=="all" || state.month!=="all";
+
+function filteredDonors(){
+  const terms = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+  return DONORS.filter(d => terms.every(t => d.hay.includes(t)))
+    .map(d => {
+      const gifts = d.donations.filter(g => giftMatchesDate(g) && giftMatchesType(g));
+      return {d, gifts, sum: gifts.reduce((s,g)=>s+g.amount,0)};
+    })
+    .filter(x => {
+      if (state.type==="pledge") return x.d.pledge_balance > 0;
+      if (dateFilterOn() || state.type!=="all") return x.gifts.length > 0;
+      return true;
+    });
+}
+function filteredGifts(){
+  const terms = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+  return GIFTS.filter(g => terms.every(t => g.donor.hay.includes(t)) && giftMatchesDate(g) && giftMatchesType(g));
+}
+
+// ---------- render ----------
+function renderStats(rows, gifts){
+  const sum = gifts.reduce((s,g)=>s+g.amount,0);
+  const due = rows.reduce((s,x)=>s+Math.max(0,x.d.pledge_balance),0);
+  $("#stats").innerHTML = [
+    ["Donors", rows.length.toLocaleString()],
+    ["Gifts", gifts.length.toLocaleString()],
+    ["Amount", money(sum)],
+    ["Pledge balance due", money(due)],
+  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+}
+
+function th(label, key, cls=""){ const [k,dir] = state.sort[state.tab]; return `<th data-key="${key}" class="${cls} ${k===key?"sorted":""} ${dir>0?"asc":""}">${label}</th>`; }
+
+function renderDonors(rows){
+  const [k,dir] = state.sort.donors;
+  const val = x => k==="sum"?x.sum : k==="balance"?x.d.pledge_balance : k==="total"?x.d.total : (x.d[k]||"").toLowerCase();
+  rows.sort((a,b)=> (val(a)>val(b)?1:val(a)<val(b)?-1:0)*dir);
+  if (!rows.length) return `<div class="empty">No donors match.</div>`;
+  const showFiltered = dateFilterOn() || state.type!=="all";
+  return `<div class="tablewrap"><table><thead><tr>
+    ${th("Name","last")}${th("Contact","email","hide-sm")}
+    ${showFiltered ? th("Matching gifts","sum","num") : ""}
+    ${th(DATA.year+" total","total","num")}${th("Pledge balance","balance","num")}</tr></thead><tbody>` +
+    rows.map(({d,gifts,sum}) => `<tr class="row" data-id="${d.id}">
+      <td><div class="name">${esc(d.display)}</div><div class="meta">${esc([d.title,d.city].filter(Boolean).join(" · "))}</div></td>
+      <td class="hide-sm meta">${esc(d.email)}${d.email&&d.phone?"<br>":""}${esc(d.phone)}</td>
+      ${showFiltered ? `<td class="num">${money(sum)}<div class="meta">${gifts.length} gift${gifts.length===1?"":"s"}</div></td>` : ""}
+      <td class="num">${money(d.total)}</td>
+      <td class="num ${d.pledge_balance>0?"due":""}">${d.pledge_balance?money(d.pledge_balance):"—"}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
+function renderGifts(gifts){
+  const [k,dir] = state.sort.gifts;
+  const val = g => k==="date"?(g.date||"") : k==="amount"?g.amount : k==="donor"?g.donor.display.toLowerCase() : (g[k]||"").toLowerCase();
+  gifts.sort((a,b)=> (val(a)>val(b)?1:val(a)<val(b)?-1:0)*dir);
+  if (!gifts.length) return `<div class="empty">No gifts match.</div>`;
+  return `<div class="tablewrap"><table><thead><tr>
+    ${th("Donor","donor")}${th(state.cal==="greg"?"Month":"Hebrew month","date")}${th(state.cal==="greg"?"Hebrew month":"Month","date","hide-sm")}
+    ${th("Type","type")}${th("Method","method","hide-sm")}${th("Amount","amount","num")}</tr></thead><tbody>` +
+    gifts.map(g => `<tr class="row" data-id="${g.donor.id}">
+      <td class="name">${esc(g.donor.display)}</td>
+      <td>${esc(state.cal==="greg"?g.gregLabel:g.hebLabel)}</td>
+      <td class="hide-sm meta">${esc(state.cal==="greg"?g.hebLabel:g.gregLabel)}</td>
+      <td><span class="chip">${g.type==="parlor"?"Parlor Meeting":"Donation"}</span></td>
+      <td class="hide-sm meta">${esc(g.method)}</td>
+      <td class="num">${money(g.amount)}</td></tr>`).join("") + `</tbody></table></div>`;
+}
+
+function renderProfile(d){
+  const gifts = [...d.donations].sort((a,b)=>(b.date||"")>(a.date||"")?1:-1);
+  const addr = [d.address, [d.city, d.state].filter(Boolean).join(", "), d.zip].filter(Boolean).join(" · ");
+  const pledgeRows = [
+    ["Outstanding from "+(DATA.year-1), d.pledge_outstanding_prior],
+    [DATA.year+" pledge", d.pledge_current],
+    ["Balance due", d.pledge_balance],
+  ];
+  return `<div class="profile">
+    <div class="head">
+      <div><h2>${esc(d.title?d.title+" ":"")}${esc([d.first,d.last].filter(Boolean).join(" "))}</h2>
+        <div class="meta">${esc(addr||"No address on file")}</div></div>
+      <button class="btn small" id="backBtn">← Back to list</button>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Contact</h3><div class="kv">
+        <span class="k">Email</span><span class="v">${d.email?`<a href="mailto:${esc(d.email)}">${esc(d.email)}</a>`:"—"}</span>
+        <span class="k">Phone</span><span class="v">${d.phone?`<a href="tel:${esc(d.phone)}">${esc(d.phone)}</a>`:"—"}</span>
+        <span class="k">Address</span><span class="v">${esc(addr)||"—"}</span></div></div>
+      <div class="card"><h3>Pledges &amp; totals</h3><div class="kv">
+        ${pledgeRows.map(([k,v])=>`<span class="k">${k}</span><span class="v ${k==="Balance due"&&v>0?"due":""}">${money(v)}</span>`).join("")}
+        <span class="k">${DATA.year} donations</span><span class="v">${money(d.donations_total)}</span>
+        <span class="k">Parlor Meeting</span><span class="v">${money(d.parlor_total)}</span>
+        <span class="k"><b>Total given</b></span><span class="v"><b>${money(d.total)}</b></span></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Gift history (${gifts.length})</h3>
+      ${gifts.length ? `<div class="tablewrap"><table><thead><tr><th>Month</th><th>Hebrew month</th><th>Type</th><th>Method</th><th class="num">Amount</th></tr></thead><tbody>` +
+        gifts.map(g=>`<tr><td>${esc(g.gregLabel)}</td><td class="meta">${esc(g.hebLabel)}</td><td><span class="chip">${g.type==="parlor"?"Parlor Meeting":"Donation"}</span></td><td class="meta">${esc(g.method)}</td><td class="num">${money(g.amount)}</td></tr>`).join("") +
+        `</tbody></table></div>` : `<div class="meta">No gifts recorded.</div>`}
+    </div></div>`;
+}
+
+let lastRows = [], lastGifts = [];
+function render(){
+  const view = $("#view");
+  if (state.donor){
+    const d = DONORS.find(x=>x.id===state.donor);
+    view.innerHTML = renderProfile(d);
+    $("#backBtn").onclick = () => { state.donor=null; render(); };
+    return;
+  }
+  lastRows = filteredDonors(); lastGifts = filteredGifts();
+  renderStats(lastRows, lastGifts);
+  view.innerHTML = state.tab==="donors" ? renderDonors(lastRows) : renderGifts(lastGifts);
+  view.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => { state.donor=+tr.dataset.id; render(); window.scrollTo(0,0); });
+  view.querySelectorAll("th[data-key]").forEach(h => h.onclick = () => {
+    const s = state.sort[state.tab]; s[1] = s[0]===h.dataset.key ? -s[1] : 1; s[0] = h.dataset.key; render();
+  });
+}
+
+function exportCSV(){
+  let rows, name;
+  if (state.tab==="donors"){
+    name = "donors.csv";
+    rows = [["Last","First","Title","Email","Phone","Address","City","State","Zip","Matching amount","Total given","Pledge balance"]]
+      .concat(lastRows.map(({d,sum})=>[d.last,d.first,d.title,d.email,d.phone,d.address,d.city,d.state,d.zip,sum,d.total,d.pledge_balance]));
+  } else {
+    name = "gifts.csv";
+    rows = [["Last","First","Month","Hebrew month","Type","Method","Amount"]]
+      .concat(lastGifts.map(g=>[g.donor.last,g.donor.first,g.gregLabel,g.hebLabel,g.type,g.method,g.amount]));
+  }
+  const csv = rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download = name; a.click();
+}
+
+// ---------- wiring ----------
+$("#q").addEventListener("input", e => { state.q = e.target.value; state.donor=null; render(); });
+$("#yearSel").addEventListener("change", e => { state.year = e.target.value; state.donor=null; render(); });
+$("#monthSel").addEventListener("change", e => { state.month = e.target.value; state.donor=null; render(); });
+$("#typeSel").addEventListener("change", e => { state.type = e.target.value; state.donor=null; render(); });
+$("#calSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.cal = b.dataset.cal; $("#calSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+  buildDateOptions(); render();
+});
+document.querySelector(".tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.tab = b.dataset.tab; state.donor=null; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b)); render();
+});
+$("#clearBtn").onclick = () => { state.q=""; $("#q").value=""; state.type="all"; $("#typeSel").value="all"; state.year="all"; state.donor=null; buildDateOptions(); render(); };
+$("#exportBtn").onclick = exportCSV;
+$("#lockBtn").onclick = () => { try{ sessionStorage.removeItem("kdl_pw"); }catch(e){} location.reload(); };
+
+async function unlock(pw){
+  const res = await fetch("data.enc.json", {cache:"no-store"});
+  if (!res.ok) throw new Error("Could not load data file (" + res.status + ")");
+  const blob = await res.json();
+  const data = await decrypt(blob, pw);
+  prepare(data);
+  $("#srcline").textContent = `${DATA.donors.length} donors · data as of ${DATA.generated} · ${DATA.source}`;
+  $("#lock").classList.add("hide"); $("#app").classList.remove("hide");
+  render();
+}
+$("#lockform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const pw = $("#pw").value; const err = $("#lockerr"); err.textContent = "Unlocking…";
+  try { await unlock(pw); try{ sessionStorage.setItem("kdl_pw", pw); }catch(_){} }
+  catch (ex) { err.textContent = ex.name==="OperationError" ? "Incorrect password." : ex.message; }
+});
+(async () => { let pw=null; try{ pw = sessionStorage.getItem("kdl_pw"); }catch(e){} if (pw){ try{ await unlock(pw); }catch(e){ try{sessionStorage.removeItem("kdl_pw");}catch(_){} } } })();
+})();
+</script>
+</body>
+</html>

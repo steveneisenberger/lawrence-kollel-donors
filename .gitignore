@@ -1,0 +1,6 @@
+# Never commit the plaintext spreadsheet or any plaintext export
+*.xlsx
+*.xls
+*.csv
+plain*.json
+__pycache__/
