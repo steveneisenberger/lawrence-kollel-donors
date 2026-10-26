@@ -80,7 +80,16 @@
   .kv .v{font-variant-numeric:tabular-nums}
   .hide{display:none!important}
   footer{color:var(--muted);font-size:12px;margin-top:24px;text-align:center}
-  @media (max-width:600px){ .hide-sm{display:none} }
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+  .summary .stat{background:var(--bg)}
+  .show-sm{display:none}
+  @media (max-width:600px){
+    .hide-sm{display:none} .show-sm{display:block}
+    .wrap{padding:10px} th,td{padding:8px 7px} .stat .v{font-size:17px}
+    .filters select{flex:1 1 40%} .filters .seg{flex:1 1 100%;justify-content:center}
+    .profile{padding:12px} .profile h2{font-size:19px}
+    header.top .btn{padding:6px 8px}
+  }
 </style>
 </head>
 <body>
@@ -313,8 +322,13 @@ function renderProfile(d){
         <span class="k"><b>Total given</b></span><span class="v"><b>${money(d.total)}</b></span></div></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Gift history (${gifts.length})</h3>
-      ${gifts.length ? `<div class="tablewrap"><table><thead><tr><th>Month</th><th>Hebrew month</th><th>Type</th><th>Method</th><th class="num">Amount</th></tr></thead><tbody>` +
-        gifts.map(g=>`<tr><td>${esc(g.gregLabel)}</td><td class="meta">${esc(g.hebLabel)}</td><td><span class="chip">${g.type==="parlor"?"Parlor Meeting":"Donation"}</span></td><td class="meta">${esc(g.method)}</td><td class="num">${money(g.amount)}</td></tr>`).join("") +
+      <div class="summary">
+        <div class="stat"><div class="k">Amount pledged</div><div class="v">${money(d.pledge_outstanding_prior + d.pledge_current)}</div><div class="meta">${money(d.pledge_outstanding_prior)} from ${DATA.year-1} + ${money(d.pledge_current)} for ${DATA.year}</div></div>
+        <div class="stat"><div class="k">Amount given</div><div class="v pos">${money(d.total)}</div><div class="meta">${money(d.donations_total)} donations + ${money(d.parlor_total)} Parlor Meeting</div></div>
+        <div class="stat"><div class="k">Still owed on pledge</div><div class="v ${d.pledge_balance>0?"due":""}">${money(d.pledge_balance)}</div><div class="meta">${d.pledge_balance>0?"Open balance":"Paid in full / no pledge"}</div></div>
+      </div>
+      ${gifts.length ? `<div class="tablewrap"><table><thead><tr><th>Month</th><th class="hide-sm">Hebrew month</th><th>Type</th><th class="hide-sm">Method</th><th class="num">Amount</th></tr></thead><tbody>` +
+        gifts.map(g=>`<tr><td>${esc(g.gregLabel)}<div class="meta show-sm">${esc(g.hebLabel)}</div></td><td class="meta hide-sm">${esc(g.hebLabel)}</td><td><span class="chip">${g.type==="parlor"?"Parlor Meeting":"Donation"}</span><div class="meta show-sm">${esc(g.method)}</div></td><td class="meta hide-sm">${esc(g.method)}</td><td class="num">${money(g.amount)}</td></tr>`).join("") +
         `</tbody></table></div>` : `<div class="meta">No gifts recorded.</div>`}
     </div></div>`;
 }
